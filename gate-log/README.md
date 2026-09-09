@@ -15,6 +15,11 @@ Want it on your Desktop? Drag `Open Gate Log.app` there, or hold ⌘⌥ while
 dragging to make an alias — either way it still finds the project folder on
 its own.
 
+If you had an earlier copy without the icon and `git pull` doesn't show the
+new one, Finder's icon cache is just being stale — right-click the app,
+choose **Get Info**, and it'll refresh; a Finder relaunch (hold ⌥ and
+right-click the Finder Dock icon → Relaunch) also fixes it.
+
 If double-clicking ever doesn't work, you can start it by hand:
 
 ```
