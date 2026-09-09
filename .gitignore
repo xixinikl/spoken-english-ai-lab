@@ -1,0 +1,4 @@
+.DS_Store
+gate-log/data.json
+gate-log/data.json.tmp
+__pycache__/

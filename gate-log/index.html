@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gate Log</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root {
+    --bg: #F6F3E9;
+    --surface: #FFFFFF;
+    --surface-border: #E6DFC8;
+    --ink: #1E2433;
+    --muted: #7A7156;
+    --accent: #C98A2E;
+    --accent-soft: #FBEBD3;
+    --accent-ink: #ffffff;
+    --good: #2E8B74;
+    --good-soft: #E1F2ED;
+    --critical: #B54A3C;
+    --critical-soft: #F8E4DF;
+    --future: #E6DFC8;
+    --board-tile-border: #E9C98C;
+    --shadow: 0 1px 2px rgba(120,90,10,0.05), 0 8px 20px -12px rgba(120,90,10,0.14);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171A22;
+      --surface: #20242F;
+      --surface-border: #333849;
+      --ink: #EDEAE1;
+      --muted: #9C9686;
+      --accent: #E3A542;
+      --accent-soft: #34291A;
+      --accent-ink: #1B1300;
+      --good: #4CAE95;
+      --good-soft: #223832;
+      --critical: #D97361;
+      --critical-soft: #3B2622;
+      --future: #333849;
+      --board-tile-border: #4A3A20;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --bg: #171A22;
+    --surface: #20242F;
+    --surface-border: #333849;
+    --ink: #EDEAE1;
+    --muted: #9C9686;
+    --accent: #E3A542;
+    --accent-soft: #34291A;
+    --accent-ink: #1B1300;
+    --good: #4CAE95;
+    --good-soft: #223832;
+    --critical: #D97361;
+    --critical-soft: #3B2622;
+    --future: #333849;
+    --board-tile-border: #4A3A20;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px -12px rgba(0,0,0,0.5);
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', -apple-system, sans-serif;
+    padding: 28px 20px 64px;
+    display: flex;
+    justify-content: center;
+  }
+
+  .wrap { width: 100%; max-width: 760px; display: flex; flex-direction: column; gap: 22px; }
+
+  .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .masthead h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 0.02em;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .masthead .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ---- Board ---- */
+  .board {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    padding: 20px 22px 22px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .board-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--surface-border);
+  }
+  .board-row .phase-name {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--accent);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+  }
+  .board-row .phase-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    margin-top: 4px;
+  }
+  .tiles { display: flex; gap: 20px; flex-wrap: wrap; }
+  .tile { display: flex; flex-direction: column; gap: 6px; min-width: 78px; }
+  .tile .num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: 30px;
+    font-weight: 700;
+    color: var(--ink);
+    background: var(--accent-soft);
+    border: 1px solid var(--board-tile-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    text-align: center;
+  }
+  .tile .cap {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: center;
+  }
+
+  /* ---- Phase rail ---- */
+  .rail-card {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .rail-card h2 { font-size: 13px; margin: 0 0 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .rail { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .rail-stop { position: relative; padding-top: 14px; }
+  .rail-stop::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px; border-radius: 2px;
+    background: var(--future);
+  }
+  .rail-stop.done::before { background: var(--good); }
+  .rail-stop.current::before { background: var(--accent); }
+  .rail-stop .stop-weeks { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); }
+  .rail-stop .stop-name { font-size: 13.5px; font-weight: 600; margin-top: 3px; }
+  .rail-stop.current .stop-name { color: var(--accent); }
+
+  /* ---- Today card (boarding-pass styled) ---- */
+  .pass {
+    background: var(--surface);
+    border: 1px solid var(--surface-border);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    display: flex;
+    overflow: hidden;
+  }
+  .pass-main { flex: 1; padding: 20px 22px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+  .pass-stub {
+    width: 108px;
+    flex-shrink: 0;
+    background: repeating-linear-gradient(135deg, transparent 0 6px, var(--future) 6px 7px), var(--surface);
+    border-left: 2px dashed var(--surface-border);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 14px 8px;
+  }
+  .pass-stub .day-n { font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 700; }
+  .pass-stub .day-cap { font-family: 'IBM Plex Mono', monospace; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); text-align: center; }
+
+  .pass-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+  .pass-head .date { font-weight: 600; font-size: 15px; }
+  .pass-head .weekday { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--bg);
+  }
+  .task.checked { background: var(--good-soft); border-color: var(--good); }
+  .task input { width: 17px; height: 17px; accent-color: var(--good); flex-shrink: 0; cursor: pointer; }
+  .task label { font-size: 14px; cursor: pointer; flex: 1; }
+  .task.checked label { text-decoration: line-through; color: var(--muted); }
+
+  .journal-field textarea {
+    width: 100%;
+    min-height: 64px;
+    resize: vertical;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13.5px;
+    padding: 10px 12px;
+    border: 1px solid var(--surface-border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  .journal-field textarea:focus, .task:focus-within { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .journal-field .fl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 6px; display:block; }
+
+  /* ---- Week strip ---- */
+  .week-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .week-card h2 { font-size: 13px; margin: 0 0 14px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .week-strip { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+  .day-tile { border-radius: 8px; padding: 10px 6px; text-align: center; border: 1px solid var(--surface-border); background: var(--bg); }
+  .day-tile .dlabel { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; }
+  .day-tile .dnum { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; margin-top: 3px; }
+  .day-tile.done { background: var(--good-soft); border-color: var(--good); }
+  .day-tile.missed { background: var(--critical-soft); border-color: var(--critical); }
+  .day-tile.today { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+  /* ---- Log ---- */
+  .log-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .log-card h2 { font-size: 13px; margin: 0 0 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .log-list { display: flex; flex-direction: column; gap: 10px; max-height: 260px; overflow-y: auto; }
+  .log-entry { display: flex; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surface-border); }
+  .log-entry:last-child { border-bottom: none; }
+  .log-entry .le-date { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--muted); flex-shrink: 0; width: 78px; padding-top: 1px; }
+  .log-entry .le-text { font-size: 13.5px; flex: 1; }
+  .log-empty { font-size: 13px; color: var(--muted); font-style: normal; }
+
+  .footer-note { font-size: 12px; color: var(--muted); text-align: center; line-height: 1.6; }
+  .footer-note button { font: inherit; color: var(--accent); background: none; border: none; cursor: pointer; text-decoration: underline; padding: 0; }
+
+  .backup-card { background: var(--surface); border: 1px solid var(--surface-border); border-radius: 10px; padding: 18px 20px; box-shadow: var(--shadow); }
+  .backup-card h2 { font-size: 13px; margin: 0 0 8px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .backup-desc { font-size: 13px; color: var(--muted); margin: 0 0 12px; line-height: 1.55; }
+  .backup-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .backup-actions button {
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 7px;
+    border: 1px solid var(--surface-border);
+    background: var(--bg);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .backup-actions button:hover { border-color: var(--accent); color: var(--accent); }
+  .backup-status { font-size: 12px; color: var(--muted); margin: 10px 0 0; min-height: 16px; }
+
+  @media (max-width: 480px) {
+    .pass { flex-direction: column; }
+    .pass-stub { width: 100%; flex-direction: row; border-left: none; border-top: 2px dashed var(--surface-border); padding: 10px; }
+    .rail { grid-template-columns: repeat(2, 1fr); }
+    .tiles { gap: 12px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .task, .day-tile { transition: background 0.15s ease, border-color 0.15s ease; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="masthead">
+    <h1>Gate Log</h1>
+    <span class="tag">24-week airport English plan</span>
+  </div>
+
+  <div class="board">
+    <div class="board-row">
+      <div>
+        <div class="phase-name" id="phaseName">—</div>
+        <div class="phase-sub" id="phaseSub">—</div>
+      </div>
+    </div>
+    <div class="tiles">
+      <div class="tile"><div class="num" id="tDay">–</div><div class="cap">Day</div></div>
+      <div class="tile"><div class="num" id="tWeek">–</div><div class="cap">Week</div></div>
+      <div class="tile"><div class="num" id="tStreak">–</div><div class="cap">Streak</div></div>
+      <div class="tile"><div class="num" id="tPct">–</div><div class="cap">7d rate</div></div>
+    </div>
+  </div>
+
+  <div class="rail-card">
+    <h2>Programme</h2>
+    <div class="rail" id="rail"></div>
+  </div>
+
+  <div class="pass">
+    <div class="pass-main">
+      <div class="pass-head">
+        <span class="date" id="todayDate">—</span>
+        <span class="weekday" id="todayWeekday">—</span>
+      </div>
+      <div class="task-list" id="taskList"></div>
+      <div class="journal-field">
+        <span class="fl">Flight log — mood / difficulty today</span>
+        <textarea id="journalInput" placeholder="e.g. 今天听力还是跟不上连读，明天换慢一点的一集..."></textarea>
+      </div>
+    </div>
+    <div class="pass-stub">
+      <div class="day-n" id="stubDay">–</div>
+      <div class="day-cap">Boarding<br>Day</div>
+    </div>
+  </div>
+
+  <div class="week-card">
+    <h2>This week</h2>
+    <div class="week-strip" id="weekStrip"></div>
+  </div>
+
+  <div class="log-card">
+    <h2>Flight log</h2>
+    <div class="log-list" id="logList"></div>
+  </div>
+
+  <div class="backup-card">
+    <h2>备份 &amp; 分享进度</h2>
+    <p class="backup-desc">"导出进度报告"生成一份 Markdown 文档，下载后直接发给 Claude 看就行。"导出/导入备份"是完整数据的 .json，用来恢复记录。</p>
+    <div class="backup-actions">
+      <button type="button" id="exportMdBtn">📄 导出进度报告</button>
+      <button type="button" id="exportBtn">⭳ 导出备份</button>
+      <button type="button" id="importBtn">⭱ 导入备份</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+    <p class="backup-status" id="backupStatus"></p>
+  </div>
+
+  <div class="footer-note" id="footerNote"></div>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'gate-log-v1';
+  var WEEKDAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  var WEEKDAY_NAMES_CN = ['周日','周一','周二','周三','周四','周五','周六'];
+
+  var PHASES = [
+    { key: 'p1', name: '打地基', weeks: [1,4],  sub: 'Foundation · 建立方法和习惯' },
+    { key: 'p2', name: '攻听力语法', weeks: [5,12], sub: 'Ear & Grammar · 听力语法同步上量' },
+    { key: 'p3', name: '场景实战', weeks: [13,20], sub: 'Scenario Drill · 从说对到应对意外' },
+    { key: 'p4', name: '全真模拟', weeks: [21,24], sub: 'Full Simulation · 建立上岗信心' }
+  ];
+
+  function pad(n) { return n < 10 ? '0' + n : '' + n; }
+  function toDateStr(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+  function startOfDay(d) { var x = new Date(d); x.setHours(0,0,0,0); return x; }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function dayIndex(startDate, date) {
+    return Math.round((startOfDay(date) - startOfDay(startDate)) / 86400000) + 1;
+  }
+  function weekOf(dayN) { return Math.floor((Math.max(dayN,1) - 1) / 7) + 1; }
+  function phaseOf(weekN) {
+    for (var i = 0; i < PHASES.length; i++) {
+      if (weekN >= PHASES[i].weeks[0] && weekN <= PHASES[i].weeks[1]) return PHASES[i];
+    }
+    return weekN < 1 ? PHASES[0] : { key: 'done', name: '计划完成', sub: 'Programme complete · 持续巩固中' };
+  }
+
+  function tasksForDate(date, weekN) {
+    var dow = date.getDay(); // 0 Sun .. 6 Sat
+    var list = [];
+    if (dow === 0) {
+      list.push({ id: 'review', label: '复盘打卡：回顾本周 + 写1-2句心情/难点' });
+      if (weekN >= 13) list.push({ id: 'stress', label: '压力测试对话（连续/刁难场景）' });
+    } else if (dow === 6) {
+      list.push({ id: 'airport', label: '机场场景精听（替代网课）20-25分钟' });
+    } else {
+      list.push({ id: 'course', label: '网课精听 20-25分钟' });
+      if (dow === 1 || dow === 3 || dow === 5) {
+        list.push({ id: 'dialogue', label: 'AI角色扮演对话 10-15分钟' });
+      }
+    }
+    return list;
+  }
+
+  function loadStore() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return { startDate: null, checkins: {}, journal: {} };
+  }
+  function saveStore(s) {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (e) {}
+  }
+
+  // 'local' = browser storage only (no backend reachable).
+  // 'server' = the local Python backend is running and data.json is the source of truth.
+  var activeBackend = 'local';
+
+  // Always mirrors to localStorage as a safety net; also pushes to the
+  // backend's data.json when server.py is running.
+  function persist() {
+    saveStore(store);
+    if (activeBackend === 'server') {
+      fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(store)
+      }).catch(function () {});
+    }
+  }
+
+  var store = loadStore();
+  var today = startOfDay(new Date());
+  if (!store.startDate) {
+    store.startDate = toDateStr(today);
+    saveStore(store);
+  }
+  var startDate = startOfDay(new Date(store.startDate + 'T00:00:00'));
+
+  function isDayFullyDone(date) {
+    var ds = toDateStr(date);
+    var wN = weekOf(dayIndex(startDate, date));
+    var tasks = tasksForDate(date, wN);
+    var rec = store.checkins[ds] || {};
+    if (!tasks.length) return false;
+    return tasks.every(function (t) { return !!rec[t.id]; });
+  }
+
+  function computeStreak() {
+    var count = 0;
+    var d = new Date(today);
+    var first = true;
+    while (dayIndex(startDate, d) >= 1) {
+      var done = isDayFullyDone(d);
+      if (first && !done) {
+        // today not finished yet — doesn't break streak, just don't count it
+        first = false;
+        d = addDays(d, -1);
+        continue;
+      }
+      first = false;
+      if (done) { count++; d = addDays(d, -1); } else { break; }
+    }
+    return count;
+  }
+
+  function computeWeekRate() {
+    var total = 0, done = 0;
+    for (var i = 6; i >= 0; i--) {
+      var d = addDays(today, -i);
+      if (dayIndex(startDate, d) < 1) continue;
+      total++;
+      if (isDayFullyDone(d)) done++;
+    }
+    if (!total) return '–';
+    return Math.round((done / total) * 100) + '%';
+  }
+
+  function renderBoard() {
+    var dayN = dayIndex(startDate, today);
+    var weekN = weekOf(dayN);
+    var phase = phaseOf(weekN);
+    document.getElementById('phaseName').textContent = phase.name.toUpperCase();
+    document.getElementById('phaseSub').textContent = phase.sub;
+    document.getElementById('tDay').textContent = dayN;
+    document.getElementById('tWeek').textContent = Math.min(weekN, 24);
+    document.getElementById('tStreak').textContent = computeStreak();
+    document.getElementById('tPct').textContent = computeWeekRate();
+    document.getElementById('stubDay').textContent = dayN;
+  }
+
+  function renderRail() {
+    var dayN = dayIndex(startDate, today);
+    var weekN = weekOf(dayN);
+    var rail = document.getElementById('rail');
+    rail.innerHTML = '';
+    PHASES.forEach(function (p) {
+      var cls = 'rail-stop';
+      if (weekN > p.weeks[1]) cls += ' done';
+      else if (weekN >= p.weeks[0] && weekN <= p.weeks[1]) cls += ' current';
+      var el = document.createElement('div');
+      el.className = cls;
+      el.innerHTML = '<div class="stop-weeks">周 ' + p.weeks[0] + '–' + p.weeks[1] + '</div><div class="stop-name">' + p.name + '</div>';
+      rail.appendChild(el);
+    });
+  }
+
+  function renderToday() {
+    var dayN = dayIndex(startDate, today);
+    var weekN = weekOf(dayN);
+    var tasks = tasksForDate(today, weekN);
+    var ds = toDateStr(today);
+    var rec = store.checkins[ds] || {};
+
+    document.getElementById('todayDate').textContent = today.toLocaleDateString('zh-CN', { month: 'long', day: 'numeric' });
+    document.getElementById('todayWeekday').textContent = WEEKDAY_NAMES_CN[today.getDay()];
+
+    var list = document.getElementById('taskList');
+    list.innerHTML = '';
+    tasks.forEach(function (t) {
+      var row = document.createElement('div');
+      row.className = 'task' + (rec[t.id] ? ' checked' : '');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = 'task-' + t.id;
+      cb.checked = !!rec[t.id];
+      cb.addEventListener('change', function () {
+        if (!store.checkins[ds]) store.checkins[ds] = {};
+        store.checkins[ds][t.id] = cb.checked;
+        persist();
+        renderAll();
+      });
+      var lbl = document.createElement('label');
+      lbl.htmlFor = cb.id;
+      lbl.textContent = t.label;
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      list.appendChild(row);
+    });
+
+    var journalInput = document.getElementById('journalInput');
+    journalInput.value = (store.journal && store.journal[ds]) || '';
+    journalInput.oninput = function () {
+      if (!store.journal) store.journal = {};
+      store.journal[ds] = journalInput.value;
+      saveStore(store); // cheap local mirror on every keystroke
+    };
+    journalInput.onblur = function () {
+      persist(); // push to the backend only when the viewer leaves the field
+      renderLog();
+    };
+  }
+
+  function renderWeekStrip() {
+    var strip = document.getElementById('weekStrip');
+    strip.innerHTML = '';
+    // Monday-start week containing today
+    var dow = today.getDay(); // 0..6, 0=Sun
+    var mondayOffset = dow === 0 ? -6 : 1 - dow;
+    var monday = addDays(today, mondayOffset);
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(monday, i);
+      var ds = toDateStr(d);
+      var inProgram = dayIndex(startDate, d) >= 1;
+      var tile = document.createElement('div');
+      var cls = 'day-tile';
+      var isToday = toDateStr(d) === toDateStr(today);
+      var isPast = d < today;
+      if (inProgram && isPast && isDayFullyDone(d)) cls += ' done';
+      else if (inProgram && isPast && !isDayFullyDone(d)) cls += ' missed';
+      if (isToday) cls += ' today';
+      tile.className = cls;
+      tile.innerHTML = '<div class="dlabel">' + WEEKDAY_NAMES[d.getDay()] + '</div><div class="dnum">' + d.getDate() + '</div>';
+      strip.appendChild(tile);
+    }
+  }
+
+  function renderLog() {
+    var entries = [];
+    Object.keys(store.journal || {}).forEach(function (ds) {
+      var text = store.journal[ds];
+      if (text && text.trim()) entries.push({ ds: ds, text: text.trim() });
+    });
+    entries.sort(function (a, b) { return a.ds < b.ds ? 1 : -1; });
+    var box = document.getElementById('logList');
+    box.innerHTML = '';
+    if (!entries.length) {
+      box.innerHTML = '<div class="log-empty">还没有记录，今天练完写一句就好。</div>';
+      return;
+    }
+    entries.slice(0, 30).forEach(function (e) {
+      var row = document.createElement('div');
+      row.className = 'log-entry';
+      var dd = new Date(e.ds + 'T00:00:00');
+      row.innerHTML = '<div class="le-date">' + (dd.getMonth() + 1) + '/' + dd.getDate() + '</div><div class="le-text"></div>';
+      row.querySelector('.le-text').textContent = e.text;
+      box.appendChild(row);
+    });
+  }
+
+  function renderFooter() {
+    var el = document.getElementById('footerNote');
+    var statusLine = activeBackend === 'server'
+      ? '<span style="color:var(--good)">●</span> 已连接本地后端，记录实时写入 gate-log/data.json'
+      : '<span style="color:var(--muted)">●</span> 未连接后端，先存在这个浏览器里（双击 "Open Gate Log" 启动后端可切换）';
+    el.innerHTML = statusLine + '　·　开始日期 ' + store.startDate + '　<button id="resetBtn" type="button">重设开始日期为今天</button>';
+    document.getElementById('resetBtn').addEventListener('click', function () {
+      store.startDate = toDateStr(today);
+      persist();
+      startDate = startOfDay(new Date(store.startDate + 'T00:00:00'));
+      renderAll();
+    });
+  }
+
+  function renderAll() {
+    renderBoard();
+    renderRail();
+    renderToday();
+    renderWeekStrip();
+    renderLog();
+    renderFooter();
+  }
+
+  function setBackupStatus(msg) {
+    var el = document.getElementById('backupStatus');
+    if (el) el.textContent = msg;
+  }
+
+  function applyImportedData(parsed) {
+    if (!parsed || typeof parsed !== 'object' || !parsed.startDate) {
+      setBackupStatus('这份文件看起来不是 Gate Log 的备份，没有导入。');
+      return;
+    }
+    store = {
+      startDate: parsed.startDate,
+      checkins: parsed.checkins && typeof parsed.checkins === 'object' ? parsed.checkins : {},
+      journal: parsed.journal && typeof parsed.journal === 'object' ? parsed.journal : {}
+    };
+    startDate = startOfDay(new Date(store.startDate + 'T00:00:00'));
+    saveStore(store);
+    renderAll();
+    setBackupStatus('已从备份文件恢复。');
+  }
+
+  function downloadTextFile(filename, text, mime) {
+    var blob = new Blob([text], { type: mime });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function buildMarkdownReport() {
+    var dayN = dayIndex(startDate, today);
+    var weekN = weekOf(dayN);
+    var phase = phaseOf(weekN);
+    var lines = [];
+
+    lines.push('# Gate Log 进度报告');
+    lines.push('');
+    lines.push('生成时间：' + toDateStr(today));
+    lines.push('');
+    lines.push('- 开始日期：' + store.startDate);
+    lines.push('- 当前：第 ' + dayN + ' 天 / 第 ' + Math.min(weekN, 24) + ' 周（共24周）');
+    lines.push('- 当前阶段：' + phase.name + '（' + phase.sub + '）');
+    lines.push('- 连续打卡：' + computeStreak() + ' 天');
+    lines.push('- 近7天完成率：' + computeWeekRate());
+    lines.push('');
+    lines.push('## 阶段进度');
+    lines.push('');
+    lines.push('| 阶段 | 周数 | 状态 |');
+    lines.push('|---|---|---|');
+    PHASES.forEach(function (p) {
+      var status = weekN > p.weeks[1] ? '已完成' : (weekN >= p.weeks[0] && weekN <= p.weeks[1] ? '进行中' : '未开始');
+      lines.push('| ' + p.name + ' | 周' + p.weeks[0] + '-' + p.weeks[1] + ' | ' + status + ' |');
+    });
+    lines.push('');
+    lines.push('## 最近14天打卡');
+    lines.push('');
+    lines.push('| 日期 | 星期 | 完成情况 |');
+    lines.push('|---|---|---|');
+    for (var i = 13; i >= 0; i--) {
+      var d = addDays(today, -i);
+      if (dayIndex(startDate, d) < 1) continue;
+      var ds = toDateStr(d);
+      var wN2 = weekOf(dayIndex(startDate, d));
+      var tasks = tasksForDate(d, wN2);
+      var rec = store.checkins[ds] || {};
+      var doneCount = tasks.filter(function (t) { return !!rec[t.id]; }).length;
+      var mark;
+      if (ds === toDateStr(today)) mark = doneCount + '/' + tasks.length + '（今天，进行中）';
+      else if (doneCount === tasks.length && tasks.length > 0) mark = '✅ 完成';
+      else if (doneCount > 0) mark = '◐ ' + doneCount + '/' + tasks.length;
+      else mark = '✗ 未完成';
+      lines.push('| ' + ds + ' | ' + WEEKDAY_NAMES_CN[d.getDay()] + ' | ' + mark + ' |');
+    }
+    lines.push('');
+    lines.push('## 心情 / 难点记录');
+    lines.push('');
+    var entries = [];
+    Object.keys(store.journal || {}).forEach(function (ds2) {
+      var text = store.journal[ds2];
+      if (text && text.trim()) entries.push({ ds: ds2, text: text.trim() });
+    });
+    entries.sort(function (a, b) { return a.ds < b.ds ? 1 : -1; });
+    if (!entries.length) {
+      lines.push('（还没有记录）');
+    } else {
+      entries.slice(0, 20).forEach(function (e) {
+        lines.push('- **' + e.ds + '**：' + e.text);
+      });
+    }
+    lines.push('');
+    return lines.join('\n');
+  }
+
+  document.getElementById('exportMdBtn').addEventListener('click', function () {
+    downloadTextFile('gate-log-progress-' + toDateStr(today) + '.md', buildMarkdownReport(), 'text/markdown');
+    setBackupStatus('进度报告已下载，发给 Claude 就能看到你的真实打卡情况了。');
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    downloadTextFile('gate-log-backup-' + toDateStr(today) + '.json', JSON.stringify(store, null, 2), 'application/json');
+    setBackupStatus('已保存到你的下载文件夹。');
+  });
+
+  document.getElementById('importBtn').addEventListener('click', function () {
+    document.getElementById('importFile').click();
+  });
+  document.getElementById('importFile').addEventListener('change', function (e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        applyImportedData(JSON.parse(reader.result));
+      } catch (err) {
+        setBackupStatus('文件读取失败，确认选的是导出的那份 .json。');
+      }
+      e.target.value = '';
+    };
+    reader.onerror = function () { setBackupStatus('文件读取失败，请重试。'); };
+    reader.readAsText(file);
+  });
+
+  renderAll();
+
+  // Detect the local Python backend (server.py). If it's running, its
+  // data.json becomes the source of truth; otherwise the page stays on
+  // localStorage and everything above still works unchanged.
+  fetch('/api/data', { cache: 'no-store' })
+    .then(function (res) { if (!res.ok) throw new Error('no backend'); return res.json(); })
+    .then(function (remote) {
+      var remoteHasData = remote && (remote.startDate ||
+        (remote.checkins && Object.keys(remote.checkins).length) ||
+        (remote.journal && Object.keys(remote.journal).length));
+      if (remoteHasData) {
+        store = {
+          startDate: remote.startDate || store.startDate,
+          checkins: remote.checkins || {},
+          journal: remote.journal || {}
+        };
+        startDate = startOfDay(new Date(store.startDate + 'T00:00:00'));
+        saveStore(store);
+      } else {
+        // First run through the backend: carry over whatever was in this browser.
+        fetch('/api/data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(store)
+        }).catch(function () {});
+      }
+      activeBackend = 'server';
+      renderAll();
+    })
+    .catch(function () { /* no backend running — stays on localStorage */ });
+})();
+</script>
+</body>
+</html>
